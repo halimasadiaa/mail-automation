@@ -1,0 +1,1788 @@
+{
+  "name": "Mail Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const now = Date.now();\n\nreturn items.map(item => {\n  let raw = item.json.startTime;\n\n  if (!raw || String(raw).trim() === '') {\n    item.json.hours_until = null;\n    return item;\n  }\n\n  let meetingTime = new Date(String(raw).trim());\n\n  if (isNaN(meetingTime.getTime())) {\n    item.json.hours_until = null;\n    item.json.parse_error = 'Could not parse: ' + raw;\n    return item;\n  }\n\n  const diffMs = meetingTime.getTime() - now;\n  const diffHours = diffMs / (1000 * 60 * 60);\n\n  item.json.hours_until = Math.round(diffHours * 100) / 100;\n  item.json.debug_now_utc = new Date(now).toISOString();\n  item.json.debug_meeting_utc = meetingTime.toISOString();\n\n  return item;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3264,
+        1216
+      ],
+      "id": "4cd5c4e3-02e8-4b8f-bb4e-76c3b90cb36a",
+      "name": "Calculate Hours Until",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "skip-expired",
+              "leftValue": "={{ $json.Expired }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "skip-null-hours",
+              "leftValue": "={{ $json.hours_until }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -3056,
+        1216
+      ],
+      "id": "a3bc2839-e3be-49c6-be53-a3d934c77832",
+      "name": "Filter Active Leads"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-expired",
+              "leftValue": "={{ $json.hours_until }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2832,
+        1056
+      ],
+      "id": "05e47763-36dc-40da-85e2-1bb32fe3ccc8",
+      "name": "Is Meeting Expired?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A",
+          "mode": "list",
+          "cachedResultName": "Leads Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Expired": "true"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Expired",
+              "displayName": "Expired",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2592,
+        1088
+      ],
+      "id": "0d7f6909-5656-4987-9d37-a82afd41edf8",
+      "name": "Mark as Expired",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bZTjULNj8B9CrRpB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "no-followup1-subject",
+              "leftValue": "={{ $json.Followup1_Subject }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "no-followup1-mail",
+              "leftValue": "={{ $json.Followup1_Mail }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2656,
+        1328
+      ],
+      "id": "16d53184-24b6-4930-9229-a0a2278c85f4",
+      "name": "Needs Email Generation?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A",
+          "mode": "list",
+          "cachedResultName": "Leads Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Get row(s) in sheet1').item.json.id }}",
+            "Followup1_Mail": "={{ $json.output.followup1_body }}",
+            "Followup1_Subject": "={{ $json.output.followup1_subject }}",
+            "Followup2_Subject": "={{ $json.output.followup2_subject }}",
+            "Followup2_Mail": "={{ $json.output.followup2_body }}",
+            "Followup3_Subject": "={{ $json.output.followup3_subject }}",
+            "Followup3_Mail": "={{ $json.output.followup3_body }}",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Current Income",
+              "displayName": "Current Income",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "startTime",
+              "displayName": "startTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "meetingLink",
+              "displayName": "meetingLink",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_Subject",
+              "displayName": "Followup1_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup1_Mail",
+              "displayName": "Followup1_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup2_Subject",
+              "displayName": "Followup2_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup2_Mail",
+              "displayName": "Followup2_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup3_Subject",
+              "displayName": "Followup3_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup3_Mail",
+              "displayName": "Followup3_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup1_sent",
+              "displayName": "Followup1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_sent",
+              "displayName": "Followup2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_sent",
+              "displayName": "Followup3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Expired",
+              "displayName": "Expired",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2000,
+        1280
+      ],
+      "id": "9b893cd5-b556-4875-ae24-1132f97963b8",
+      "name": "Save Generated Emails",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bZTjULNj8B9CrRpB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "hours-lte-48",
+              "leftValue": "={{ $('Calculate Hours Until').item.json.hours_until }}",
+              "rightValue": 48,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "hours-gt-24",
+              "leftValue": "={{ $('Calculate Hours Until').item.json.hours_until }}",
+              "rightValue": 24,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "followup1-not-sent",
+              "leftValue": "={{ $('Get row(s) in sheet1').item.json.Followup1_sent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1760,
+        1120
+      ],
+      "id": "b95dc110-4e28-42a5-b93b-783eba50efc8",
+      "name": "Send Followup 1? (24-48h)"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get row(s) in sheet1').item.json.email }}",
+        "subject": "={{ $('Get row(s) in sheet1').item.json.Followup1_Subject }}",
+        "message": "={{ $('Get row(s) in sheet1').item.json.Followup1_Mail }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1456,
+        1056
+      ],
+      "id": "1a2901a6-a4d1-48c1-a1b1-ba3d4e3cf099",
+      "name": "Send Followup 1",
+      "webhookId": "1a7f6771-0e4c-4eb4-bb10-c00007b4564b",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OZOFX2F81HMEifLB",
+          "name": "Hubricks Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A",
+          "mode": "list",
+          "cachedResultName": "Leads Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Followup1_sent": "True",
+            "row_number": 0,
+            "id": "={{ $('Get row(s) in sheet1').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Current Income",
+              "displayName": "Current Income",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "startTime",
+              "displayName": "startTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "meetingLink",
+              "displayName": "meetingLink",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_Subject",
+              "displayName": "Followup1_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_Mail",
+              "displayName": "Followup1_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_Subject",
+              "displayName": "Followup2_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_Mail",
+              "displayName": "Followup2_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_Subject",
+              "displayName": "Followup3_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_Mail",
+              "displayName": "Followup3_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_sent",
+              "displayName": "Followup1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup2_sent",
+              "displayName": "Followup2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_sent",
+              "displayName": "Followup3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Expired",
+              "displayName": "Expired",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1264,
+        1056
+      ],
+      "id": "6264741d-3335-4bd7-a945-0371d6d50d61",
+      "name": "Mark Followup1 Sent",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bZTjULNj8B9CrRpB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "hours-lte-24",
+              "leftValue": "={{ $('Calculate Hours Until').item.json.hours_until }}",
+              "rightValue": 24,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "hours-gt-2",
+              "leftValue": "={{ $('Calculate Hours Until').item.json.hours_until }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "7e9b1b2e-317b-48d6-a642-2dc3197a1c78",
+              "leftValue": "={{ $('Get row(s) in sheet1').item.json.Followup2_sent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1760,
+        1328
+      ],
+      "id": "6009e744-4f50-4d30-ad85-7fbbf9985eea",
+      "name": "Send Followup 2? (2-24h)"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get row(s) in sheet1').item.json.email }}",
+        "subject": "={{ $json.Followup2_Subject }}",
+        "message": "={{ $json.Followup2_Mail }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1456,
+        1264
+      ],
+      "id": "fd6fb5c3-df03-4462-bc1c-453c02bb2e2f",
+      "name": "Send Followup 2",
+      "webhookId": "25b0080c-f5dd-4bd1-a356-18c191a8ecc9",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OZOFX2F81HMEifLB",
+          "name": "Hubricks Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A",
+          "mode": "list",
+          "cachedResultName": "Leads Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Followup2_sent": "True",
+            "row_number": 0,
+            "id": "={{ $('Get row(s) in sheet1').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Current Income",
+              "displayName": "Current Income",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "startTime",
+              "displayName": "startTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "meetingLink",
+              "displayName": "meetingLink",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_Subject",
+              "displayName": "Followup1_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_Mail",
+              "displayName": "Followup1_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_Subject",
+              "displayName": "Followup2_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_Mail",
+              "displayName": "Followup2_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_Subject",
+              "displayName": "Followup3_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_Mail",
+              "displayName": "Followup3_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_sent",
+              "displayName": "Followup1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_sent",
+              "displayName": "Followup2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Followup3_sent",
+              "displayName": "Followup3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Expired",
+              "displayName": "Expired",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1264,
+        1264
+      ],
+      "id": "846c8f4b-410f-4ec8-99c6-ef6234b9cf2c",
+      "name": "Mark Followup2 Sent",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bZTjULNj8B9CrRpB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "hours-lte-2",
+              "leftValue": "={{ $('Calculate Hours Until').item.json.hours_until }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "hours-gt-0",
+              "leftValue": "={{ $('Calculate Hours Until').item.json.hours_until }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "followup3-not-sent",
+              "leftValue": "={{ $('Get row(s) in sheet1').item.json.Followup3_sent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1760,
+        1520
+      ],
+      "id": "d876839b-1d2b-4720-80bf-6a405910d8ba",
+      "name": "Send Followup 3? (0-2h)"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get row(s) in sheet1').item.json.email }}",
+        "subject": "={{ $('Get row(s) in sheet1').item.json.Followup3_Subject }}",
+        "message": "={{ $('Get row(s) in sheet1').item.json.Followup3_Mail }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1456,
+        1456
+      ],
+      "id": "10eeeecb-5adf-4130-94ce-3cf231981317",
+      "name": "Send Followup 3",
+      "webhookId": "f6cf49be-eff8-40ee-ab40-e2cb9d8b6a21",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "OZOFX2F81HMEifLB",
+          "name": "Hubricks Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A",
+          "mode": "list",
+          "cachedResultName": "Leads Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Followup3_sent": "True",
+            "row_number": 0,
+            "id": "={{ $('Get row(s) in sheet1').item.json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Current Income",
+              "displayName": "Current Income",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "startTime",
+              "displayName": "startTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "meetingLink",
+              "displayName": "meetingLink",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_Subject",
+              "displayName": "Followup1_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_Mail",
+              "displayName": "Followup1_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_Subject",
+              "displayName": "Followup2_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_Mail",
+              "displayName": "Followup2_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_Subject",
+              "displayName": "Followup3_Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_Mail",
+              "displayName": "Followup3_Mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup1_sent",
+              "displayName": "Followup1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup2_sent",
+              "displayName": "Followup2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup3_sent",
+              "displayName": "Followup3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Expired",
+              "displayName": "Expired",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1264,
+        1456
+      ],
+      "id": "fd6cfea8-856c-4488-beae-ed9bf320eb54",
+      "name": "Mark Followup3 Sent",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bZTjULNj8B9CrRpB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -3664,
+        1216
+      ],
+      "id": "463d2274-fc1c-49c7-94dc-7f184a050251",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A",
+          "mode": "list",
+          "cachedResultName": "Leads Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FrD0WFtm_1auao3HZGN2OY3Ulct64GwF4nZBtx8my6A/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3456,
+        1216
+      ],
+      "id": "c6a7cf38-7333-43b9-9309-1d6c92b0c118",
+      "name": "Get row(s) in sheet1",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bZTjULNj8B9CrRpB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI assistant responsible for writing professional follow-up emails to clients who have scheduled a meeting.\n\nYou will receive:\n\nname → {{ $('Calculate Hours Until').item.json.name }}\nmeeting_time → {{ $('Calculate Hours Until').item.json.startTime }}\nmeeting_link → {{ $('Calculate Hours Until').item.json.meetingLink }}\nCRITICAL RULES\nDo NOT use placeholders such as:\n[Your Name]\n[Company Name]\n[Your Team]\n[Insert Link]\nDo NOT include a signature unless sender_name or company_name is explicitly provided\nIf sender details are not provided, end the email without a signature\nAlways write natural, human-sounding emails\nKeep each email concise (5–8 lines max)\nDo NOT repeat the same wording across emails — each email must feel distinct\nTASK\n\nGenerate 3 different follow-up emails for the same meeting:\n\n1. Followup1_Mail (Early Reminder — sent when meeting is 24-48 hours away)\nTone: casual, friendly, professional\nNo urgency\nLight reminder\n2. Followup2_Mail (Mid Reminder — sent when meeting is 2-24 hours away)\nTone: professional and slightly more direct\nModerate urgency\nReinforce value of the meeting\nEncourage them to be prepared\n3. Followup3_Mail (Final Reminder — sent when meeting is less than 2 hours away)\nTone: urgent and action-driven\nCreate FOMO\nEncourage immediate attention\nKeep short and impactful\nInclude meeting link if available\n\nOUTPUT FORMAT (STRICT)\nReturn ONLY valid JSON in this exact flat structure:\n{\n  \"followup1_subject\": \"\",\n  \"followup1_body\": \"\",\n  \"followup2_subject\": \"\",\n  \"followup2_body\": \"\",\n  \"followup3_subject\": \"\",\n  \"followup3_body\": \"\"\n}\nIMPORTANT\nDo NOT wrap the JSON in a string\nDo NOT return \"output\": \"...\"\nDo NOT escape JSON\nDo NOT include any extra text",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -2352,
+        1296
+      ],
+      "id": "399c9678-a77a-46ea-9051-882eba2ea808",
+      "name": "AI Agent1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"followup1_subject\": { \"type\": \"string\" },\n    \"followup1_body\": { \"type\": \"string\" },\n    \"followup2_subject\": { \"type\": \"string\" },\n    \"followup2_body\": { \"type\": \"string\" },\n    \"followup3_subject\": { \"type\": \"string\" },\n    \"followup3_body\": { \"type\": \"string\" }\n  },\n  \"required\": [\"followup1_subject\", \"followup1_body\", \"followup2_subject\", \"followup2_body\", \"followup3_subject\", \"followup3_body\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2240,
+        1616
+      ],
+      "id": "e73432ed-a147-4632-8034-07230522fcff",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2320,
+        1824
+      ],
+      "id": "efa09d33-7ea7-4e64-81c5-eb951d9c8d67",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "C3GuPph35vV148xA",
+          "name": "paid"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2480,
+        1584
+      ],
+      "id": "10f314fb-7e9d-4054-b878-fffa1b191ebf",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zBcpbyCfibnPlMtJ",
+          "name": "latest"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Schedule Trigger1": [
+      {
+        "json": {
+          "timestamp": "2026-05-22T11:30:35.005+02:00",
+          "Readable date": "May 22nd 2026, 11:30:35 am",
+          "Readable time": "11:30:35 am",
+          "Day of week": "Friday",
+          "Year": "2026",
+          "Month": "May",
+          "Day of month": "22",
+          "Hour": "11",
+          "Minute": "30",
+          "Second": "35",
+          "Timezone": "Europe/Berlin (UTC+02:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Calculate Hours Until": {
+      "main": [
+        [
+          {
+            "node": "Filter Active Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Active Leads": {
+      "main": [
+        [
+          {
+            "node": "Is Meeting Expired?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Meeting Expired?": {
+      "main": [
+        [
+          {
+            "node": "Mark as Expired",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Needs Email Generation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Email Generation?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Followup 1? (24-48h)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Followup 2? (2-24h)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Followup 3? (0-2h)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Generated Emails": {
+      "main": [
+        [
+          {
+            "node": "Send Followup 1? (24-48h)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Followup 2? (2-24h)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Followup 3? (0-2h)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Followup 1? (24-48h)": {
+      "main": [
+        [
+          {
+            "node": "Send Followup 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Followup 1": {
+      "main": [
+        [
+          {
+            "node": "Mark Followup1 Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Followup 2? (2-24h)": {
+      "main": [
+        [
+          {
+            "node": "Send Followup 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Followup 2": {
+      "main": [
+        [
+          {
+            "node": "Mark Followup2 Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Followup 3? (0-2h)": {
+      "main": [
+        [
+          {
+            "node": "Send Followup 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Followup 3": {
+      "main": [
+        [
+          {
+            "node": "Mark Followup3 Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Calculate Hours Until",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Save Generated Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "mpePTerhEc9L5Wsq",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "d6630460-9fbf-40e4-9ebf-c76f4e35be8d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eddf9f3c0fe3b8e3c3e4dfcfb847974053b5e14aaf2b17d55a6654c176ba0f53"
+  },
+  "id": "qW5KT69QDU_O7FmtG7cqs",
+  "tags": []
+}
